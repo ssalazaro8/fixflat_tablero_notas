@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  # Servicio principal: API Flask
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: team-portal-api
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./src/backend:/app
+      - ./data:/data
+    environment:
+      - FLASK_ENV=development
+      - FLASK_APP=app.py
+      - PYTHONUNBUFFERED=1
+    networks:
+      - team-portal-network
+    restart: unless-stopped
+
+networks:
+  team-portal-network:
+    driver: bridge
+
+volumes:
+  data:
+    driver: local

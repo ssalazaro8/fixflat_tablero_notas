@@ -1,0 +1,73 @@
+# Ambiente virtual
+venv/
+env/
+ENV/
+.venv
+
+# Base de datos
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Entorno
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Docker
+.dockerignore
+
+# AWS
+.aws/
+samconfig.toml
+.aws-sam/
+.chalice/
+
+# Otros
+.cache/
+.pytest_cache/
+.coverage
+htmlcov/
+node_modules/
+dist/
+build/
+*.zip
+temp/
+tmp/

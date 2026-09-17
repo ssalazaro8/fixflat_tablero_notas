@@ -1,0 +1,222 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: >
+  Team Portal with Shared Notes Board
+
+  Architecture:
+  - EC2: API backend (Flask in Docker)
+  - Lambda: Dashboard metrics calculation
+  - S3 + CloudFront: Frontend distribution
+  - RDS: Relational database (PostgreSQL recommended)
+
+Globals:
+  Function:
+    Timeout: 30
+    Runtime: python3.11
+    MemorySize: 256
+    Environment:
+      Variables:
+        DB_HOST: !Ref DatabaseEndpoint
+        DB_NAME: team_portal
+        JWT_SECRET: !Ref JWTSecret
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+    Description: Environment name
+
+  JWTSecret:
+    Type: String
+    NoEcho: true
+    Description: Secret key for JWT authentication
+
+Resources:
+  # ============= LAMBDA FUNCTION =============
+
+  DashboardMetricsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'team-portal-metrics-${Environment}'
+      CodeUri: src/lambda/
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.11
+      Description: Calculate and deliver dashboard metrics
+
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref NotesTable
+        - RDSCrudPolicy:
+            DBClusterName: !If [IsProduction, !Ref DatabaseCluster, !Ref 'AWS::NoValue']
+
+      Events:
+        MetricsAPI:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /metrics
+            Method: GET
+
+  # ============= API GATEWAY =============
+
+  ApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub 'team-portal-api-${Environment}'
+      Description: API for team portal application
+      EndpointConfiguration:
+        Types: [REGIONAL]
+
+  # ============= S3 FOR FRONTEND =============
+
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'team-portal-frontend-${AWS::AccountId}-${Environment}'
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyText:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${CloudFrontOAI}'
+            Action: s3:GetObject
+            Resource: !Sub '${FrontendBucket.Arn}/*'
+
+  # ============= CLOUDFRONT DISTRIBUTION =============
+
+  CloudFrontOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: OAI for team portal frontend
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt FrontendBucket.DomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CloudFrontOAI}'
+
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          ForwardedValues:
+            QueryString: false
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+
+        CacheBehaviors:
+          - PathPattern: '*.html'
+            TargetOriginId: S3Origin
+            ViewerProtocolPolicy: https-only
+            ForwardedValues:
+              QueryString: false
+            CachePolicyId: 4135a9dc-58f8-49f2-8e30-8e7ff2a4c541
+
+  # ============= DYNAMODB TABLE (OPTIONAL) =============
+
+  NotesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'team-portal-notes-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+
+      AttributeDefinitions:
+        - AttributeName: note_id
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+
+      KeySchema:
+        - AttributeName: note_id
+          KeyType: HASH
+        - AttributeName: created_at
+          KeyType: RANGE
+
+  # ============= SECURITY GROUP FOR EC2 =============
+
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for team portal API
+      VpcId: !Ref VPC
+
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: tcp
+          FromPort: 5000
+          ToPort: 5000
+          CidrIp: 0.0.0.0/0
+
+  # ============= IAM ROLE FOR EC2 =============
+
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EC2Role
+
+Conditions:
+  IsProduction: !Equals [!Ref Environment, 'prod']
+
+Outputs:
+  CloudFrontURL:
+    Description: CloudFront distribution URL for the frontend
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub '${AWS::StackName}-CloudFrontURL'
+
+  DashboardMetricsFunction:
+    Description: Lambda function ARN for dashboard metrics
+    Value: !GetAtt DashboardMetricsFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-MetricsFunction'
+
+  ApiGatewayEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${AWS::StackName}-APIEndpoint'
