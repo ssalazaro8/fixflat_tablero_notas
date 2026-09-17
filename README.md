@@ -27,17 +27,15 @@ Una aplicación web completa para que un equipo consulte su actividad, administr
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/ssalazaro8/fixflat-tablero-de-notas.git
-cd fixflat-tablero-de-notas
+git clone https://github.com/ssalazaro8/fixflat_tablero_notas.git
+cd fixflat-tablero-notas
 
 # 2. Ejecutar con Docker Compose
 docker-compose up --build
 
 # 3. Acceder a la aplicación
-# Abre tu navegador en: http://localhost:5000
+ Abre tu navegador en: http://localhost:5000
 ```
-
-**¡Eso es todo!** La aplicación estará lista en 30 segundos.
 
 ### Opción 2: Ejecución Local (Python)
 
@@ -45,8 +43,8 @@ docker-compose up --build
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/ssalazaro8/fixflat-tablero-de-notas.git
-cd fixflat-tablero-de-notas
+git clone https://github.com/ssalazaro8/fixflat_tablero_notas.git
+cd fixflat-tablero-notas
 
 # 2. Instalar dependencias
 cd src/backend
@@ -56,7 +54,7 @@ pip install -r requirements.txt
 python app.py
 
 # 4. Acceder a la aplicación
-# Abre tu navegador en: http://localhost:5000
+ Abre tu navegador en: http://localhost:5000
 ```
 
 ---
@@ -70,8 +68,6 @@ Todos los usuarios son preconfigurados en la base de datos embebida. Puedes usar
 | **Administrador** | `admin@demo.com` | `admin123` |
 | **Usuario** | `user@demo.com` | `user123` |
 
-### ¿Funcionarán en cualquier máquina?
-✅ **SÍ.** Las credenciales están hardcodeadas en `database.py` y se crean automáticamente en la primera ejecución. Cualquier persona que clone el proyecto verá estas cuentas.
 
 ---
 
@@ -154,9 +150,7 @@ fixflat/
 
 ---
 
-## 🐳 Docker - Confirmación de Funcionalidad
-
-**✅ DOCKER FUNCIONA CORRECTAMENTE**
+## 🐳 Docker 
 
 El proyecto incluye:
 - `Dockerfile` optimizado con Python 3.11-slim
@@ -213,38 +207,6 @@ python app.py  # Crea BD nueva con datos de demo
 
 ---
 
-## 🚀 Subir a GitHub
-
-Sigue estos pasos para subir el proyecto a tu repositorio:
-
-```bash
-# 1. Clonar tu repositorio vacío (si aún no lo has hecho)
-git clone https://github.com/ssalazaro8/fixflat-tablero-de-notas.git
-cd fixflat-tablero-de-notas
-
-# 2. Agregar los archivos del proyecto
-git add .
-
-# 3. Hacer commit inicial
-git commit -m "Initial commit: Team portal with shared notes board
-
-- Authentication and user management
-- Interactive notes board with drag & drop
-- Real-time dashboard with metrics
-- SQLite embedded database
-- Docker ready for deployment
-- AWS architecture prepared"
-
-# 4. Empujar a GitHub
-git push -u origin main
-
-# 5. Verificar que se subió
-# Abre https://github.com/ssalazaro8/fixflat-tablero-de-notas
-# Deberías ver todos los archivos del proyecto
-```
-
----
-
 ## 🏗️ Arquitectura
 
 ### Local (Desarrollo)
@@ -272,14 +234,6 @@ La plantilla SAM (`template.yaml`) contiene toda la infraestructura lista para d
 ### En Desarrollo
 - Sesiones de Flask (seguras para desarrollo local)
 - CORS habilitado para localhost
-
-### Para Producción
-1. Cambiar `app.secret_key` en `app.py`
-2. Cambiar contraseñas de demo en `database.py`
-3. Habilitar HTTPS (CloudFront/ALB)
-4. Usar RDS en lugar de SQLite
-5. Implementar rate limiting
-6. Configurar WAF en CloudFront
 
 ---
 
@@ -397,32 +351,7 @@ DATABASE_URL=...       # Cambiar BD si es necesario
 PORT=5000              # Cambiar puerto
 ```
 
-### Desplegar en AWS
-```bash
-# Requiere AWS CLI y SAM CLI instalados
 
-# Empaquetar
-sam build
-
-# Desplegar
-sam deploy --guided
-
-# Ver stack
-aws cloudformation describe-stacks --stack-name fixflat-portal
-```
-
----
-
-## 📊 Tiempo de Desarrollo
-
-- **Configuración inicial**: 30 min
-- **Backend (autenticación, BD)**: 2 horas
-- **Frontend (interfaz, interactividad)**: 2 horas
-- **Docker y AWS**: 1 hora
-- **Testing y refinamiento**: 1.5 horas
-- **Total**: ~7 horas
-
----
 
 ## 🎓 Tecnologías Utilizadas
 
@@ -435,16 +364,6 @@ aws cloudformation describe-stacks --stack-name fixflat-portal
 
 ---
 
-## 📞 Soporte
-
-Si encontras problemas:
-1. Revisa la sección "Solución de Problemas"
-2. Verifica los logs: `docker-compose logs -f`
-3. Revisa que puertos no estén en uso
-4. Asegúrate de tener Docker y Docker Compose instalados
-
----
-
 ## 📄 Licencia
 
 Este proyecto es parte de una prueba técnica y está disponible para revisión.
@@ -453,4 +372,4 @@ Este proyecto es parte de una prueba técnica y está disponible para revisión.
 
 **Versión**: 1.0.0  
 **Última actualización**: 2026-09-17  
-**Estado**: ✅ Completamente funcional y listo para producción
+
