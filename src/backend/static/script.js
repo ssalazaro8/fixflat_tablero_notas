@@ -1,12 +1,11 @@
-// ============= CONFIGURACIÓN GLOBAL =============
+//  CONFIGURACIÓN GLOBAL 
 
-const API_BASE = 'http://localhost:5000/api';
-let currentUser = null;
+const API_BASE = `${window.location.origin}/api`;let currentUser = null;
 let currentNoteId = null;
 let currentUserId = null;
 let draggedNote = null;
 
-// ============= INICIALIZACIÓN =============
+//  INICIALIZACIÓN 
 
 document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
