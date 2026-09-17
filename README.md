@@ -175,6 +175,176 @@ docker-compose exec api sqlite3 team_portal.db "SELECT * FROM users;"
 
 ---
 
+## ☁️ Despliegue en AWS (Producción)
+
+### Arquitectura de Producción
+
+```
+┌─────────────────────────────────────────────┐
+│           CloudFront (CDN)                  │
+│     Distribución global de contenido        │
+└──────────────┬──────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────┐
+│    S3 (Frontend estático)                   │
+│  HTML, CSS, JavaScript                      │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│   EC2 (Backend - Flask en Docker)           │
+│  t2.micro (Gratis 12 meses)                 │
+│  - API REST                                 │
+│  - Gestión de usuarios                      │
+│  - Gestión de notas                         │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│      Lambda (Dashboard Metrics)             │
+│  Cálculo y entrega de métricas              │
+│  Totalmente gratis (<1M requests/mes)       │
+└─────────────────────────────────────────────┘
+```
+
+### Costos (AWS Free Tier)
+
+| Servicio | Límite Gratis | Duración |
+|----------|---------------|----------|
+| **EC2 t2.micro** | 750 horas/mes | 12 meses |
+| **Lambda** | 1M requests/mes | Siempre |
+| **S3** | 5 GB almacenamiento | 12 meses |
+| **CloudFront** | 50 GB transferencia | 12 meses |
+| **Datos de salida** | 100 GB/mes | 12 meses |
+
+**Total: $0.00 durante 12 meses** ✅
+
+### Requisitos Previos
+
+1. **Cuenta AWS** (gratis en https://aws.amazon.com/free)
+2. **AWS CLI** instalado y configurado
+3. **SAM CLI** (AWS Serverless Application Model)
+4. **Docker** para el build local
+
+#### Instalar herramientas necesarias
+
+**Windows (PowerShell como administrador):**
+```powershell
+# Instalar AWS CLI
+msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi
+
+# Instalar SAM CLI
+msiexec.exe /i https://github.com/aws/aws-sam-cli/releases/latest/download/AWS_SAM_CLI_64.msi
+
+# Verificar instalación
+aws --version
+sam --version
+```
+
+**Mac:**
+```bash
+# Con Homebrew
+brew install awscli aws-sam-cli
+```
+
+**Linux:**
+```bash
+# Descargar e instalar AWS CLI
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+
+# Instalar SAM CLI
+pip install aws-sam-cli
+```
+
+### Configurar AWS CLI
+
+```bash
+# Configurar credenciales AWS
+aws configure
+
+# Cuando te pida:
+# AWS Access Key ID: [Tu access key ID]
+# AWS Secret Access Key: [Tu secret access key]
+# Default region: us-east-1
+# Default output format: json
+```
+
+> Obtén las credenciales en: https://console.aws.amazon.com/iam/home#/security_credentials
+
+### Deploy Automático (1 comando)
+
+**Windows (PowerShell):**
+```powershell
+.\deploy-aws.ps1 -Environment dev -Region us-east-1 -StackName team-portal
+```
+
+**Mac/Linux:**
+```bash
+bash deploy-aws.sh dev us-east-1 team-portal
+```
+
+### Qué hace el script
+
+1. ✅ Valida que tengas AWS CLI, SAM CLI y Docker
+2. ✅ Compila la aplicación
+3. ✅ Crea la infraestructura en AWS:
+   - VPC y subredes
+   - Instancia EC2 con Docker
+   - S3 bucket para frontend
+   - CloudFront distribution
+   - Lambda function
+4. ✅ Muestra URLs de acceso
+
+### Después del Deploy
+
+**Esperar 2-3 minutos** a que la instancia EC2 esté lista.
+
+Luego, **subir el frontend a S3:**
+
+```bash
+# Reemplaza [ACCOUNT-ID] con tu ID de cuenta AWS
+aws s3 sync src/backend/static s3://team-portal-frontend-[ACCOUNT-ID]-dev --region us-east-1
+```
+
+**Acceder a través de CloudFront:**
+- URL: `https://[distribution-id].cloudfront.net`
+- La verás en los outputs del script
+
+### Limpiar recursos (cuando termines)
+
+```bash
+# Eliminar el stack de CloudFormation
+aws cloudformation delete-stack --stack-name team-portal --region us-east-1
+
+# Verificar que se está eliminando
+aws cloudformation describe-stacks --stack-name team-portal --region us-east-1
+```
+
+> Esto elimina toda la infraestructura y **detienes los costos**.
+
+### Troubleshooting AWS
+
+**Error: "Access Denied"**
+- Verifica que tu usuario IAM tiene permisos de administrador
+- Ve a: IAM → Users → Agregar política `AdministratorAccess`
+
+**Error: "VPC not found"**
+- El template crea su propio VPC, pero si hay conflicto:
+  - Edita `template.yaml` y usa tu VPC existente
+  - Reemplaza `!Ref VPC` con tu VPC ID
+
+**EC2 no inicia la aplicación**
+- Conéctate por SSH a la instancia
+- Revisa logs: `docker-compose logs -f`
+- Verifica que Git y Docker están instalados
+
+**CloudFront muestra 403 Forbidden**
+- Asegúrate de que subiste los archivos a S3
+- Verifica que el CloudFront Origin Access Identity tiene permisos
+
+---
+
 ## 🗄️ Base de Datos
 
 ### Tipo y Ubicación
